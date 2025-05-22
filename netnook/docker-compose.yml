@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    container_name: netnook-postgres
+    environment:
+      POSTGRES_USER: netnook
+      POSTGRES_PASSWORD: netnook
+      POSTGRES_DB: netnook
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - netnook-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: netnook-backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://netnook:netnook@postgres:5432/netnook
+      - ENVIRONMENT=development
+    restart: unless-stopped
+    networks:
+      - netnook-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: netnook-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - NODE_ENV=development
+    restart: unless-stopped
+    networks:
+      - netnook-network
+
+networks:
+  netnook-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
